@@ -1,11 +1,10 @@
 /**
- *      iobroker MyAdapter class V1.2.1 from systeminfo
+ *      iobroker MyAdapter class 
  *      (c) 2019- <frankjoke@hotmail.com>
  *      MIT License
  * 
- *  V 1.2 March 2019
+ *  V 1.0.0 March 2019
  */
-// jshint  node: true, esversion: 6, strict: true, undef: true, unused: true
 "use strict";
 
 //@ts-disable TS80006
@@ -1018,4 +1017,4 @@ MyAdapter.Sequence = Sequence;
 MyAdapter.Setter = Setter;
 MyAdapter.CacheP = CacheP;
 MyAdapter.Hrtime = Hrtime;
-exports.MyAdapter = MyAdapter;
+exports = MyAdapter;
