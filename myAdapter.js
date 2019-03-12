@@ -1017,4 +1017,4 @@ MyAdapter.Sequence = Sequence;
 MyAdapter.Setter = Setter;
 MyAdapter.CacheP = CacheP;
 MyAdapter.Hrtime = Hrtime;
-exports = MyAdapter;
+exports.MyAdapter = MyAdapter;
