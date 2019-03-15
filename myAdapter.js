@@ -836,8 +836,8 @@ class MyAdapter {
                     return reject(MyAdapter.D(`request for ${url.format(opt)} had status ${res.statusCode}/${http.STATUS_CODES[res.statusCode]} other than supported ${opt.status}`));
                 res.on('data', chunk => data += chunk)
                     .on('end', () => {
-                        res.removeAllListeners();
-                        req.removeAllListeners();
+//                        res.removeAllListeners();
+//                        req.removeAllListeners();
                         if (MyAdapter.T(transform) === 'function')
                             data = transform(data);
                         if (opt.json) {
@@ -849,15 +849,16 @@ class MyAdapter {
                         }
                         return resolve(data);
                     })
+                    .on('error', e => err(e))
                     .on('close', () => err(`Connection closed before data was received!`));
-            });
+            }).on('error', e => err(e));
 
             function err(e, msg) {
                 if (!msg)
                     msg = e;
-                if (res) res.removeAllListeners();
+//                if (res) res.removeAllListeners();
                 //                req && req.removeAllListeners();
-                if (req && !req.aborted) req.abort();
+//                if (req && !req.aborted) req.abort();
                 //                res && res.destroy();
                 //                MyAdapter.Df('err in response: %s = %O', msg);
                 return reject(msg);
