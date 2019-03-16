@@ -291,7 +291,7 @@ class MyAdapter {
         }
 
         options.error = (err) => {
-            this.Ef('Error was catched by Adapter: should check installation or restart: %O',err);
+            this.Ef('Error was catched by Adapter: should check installation or restart: %O', err);
             this.stop(1);
             return true;
         };
@@ -329,8 +329,8 @@ class MyAdapter {
         this.extendForeignObject = adapter.extendForeignObjectAsync;
 
         //        adapter.removeAllListeners();
-        process.on('rejectionHandled', (reason, promise) => this.Wr(true,'Promise problem rejectionHandled of Promise %s with reason %s', promise, reason));
-        process.on('unhandledRejection', (reason, promise) => this.Wr(true,'Promise problem unhandledRejection of Promise %O with reason %O', promise, reason));
+        process.on('rejectionHandled', (reason, promise) => this.Wr(true, 'Promise problem rejectionHandled of Promise %s with reason %s', promise, reason));
+        process.on('unhandledRejection', (reason, promise) => this.Wr(true, 'Promise problem unhandledRejection of Promise %O with reason %O', promise, reason));
 
 
         adapter.on('message', (obj) => obj ? this.processMessage(
@@ -396,16 +396,23 @@ class MyAdapter {
             slog(adapter, 'debug', str), val !== undefined ? val : str);
     }
     static Dr(str) {
-        if (!inDebug || curDebug > Number(inDebug))
+        if (!inDebug && curDebug > Number(inDebug))
             return str;
-        else
-            this.f.apply(null, Array.prototype.slice.call(arguments, 1));
+        else {
+            const s = this.f.apply(null, Array.prototype.slice.call(arguments, 1));
+            if (inDebug)
+                slog(adapter, 'info', `debug: ` + s);
+            else
+                slog(adapter, 'debug', s);
+
+        }
         return str;
     }
     static Df(str) {
-        str = this.f.apply(null, arguments);
-        if (inDebug && Number(inDebug) <= curDebug)
+        if (!(!inDebug && curDebug > Number(inDebug))) {
+            str = this.f.apply(null, arguments);
             return inDebug ? slog(adapter, 'info', 'debug: ' + str) : slog(adapter, 'debug', str);
+        }
     }
     static F() {
         return util.format.apply(null, arguments);
@@ -751,10 +758,11 @@ class MyAdapter {
         };
     }
 
-    static retry(nretry, fn, arg) {
+    static retry(nretry, fn, arg, wait) {
         assert(typeof fn === 'function', 'retry (,fn,) error: fn is not a function!');
         nretry = parseInt(nretry);
-        return fn(arg).catch(err => nretry <= 0 ? this.reject(err) : this.retry(nretry - 1, fn, arg));
+        nretry = isNaN(nretry) ? 2 : nretry;
+        return Promise.resolve(fn(arg)).catch(err => nretry <= 0 ? this.reject(err) : this.wait(wait > 0 ? wait : 0).then(() => this.retry(nretry - 1, fn, arg, wait)));
     }
 
     static
@@ -836,8 +844,8 @@ class MyAdapter {
                     return reject(MyAdapter.D(`request for ${url.format(opt)} had status ${res.statusCode}/${http.STATUS_CODES[res.statusCode]} other than supported ${opt.status}`));
                 res.on('data', chunk => data += chunk)
                     .on('end', () => {
-//                        res.removeAllListeners();
-//                        req.removeAllListeners();
+                        //                        res.removeAllListeners();
+                        //                        req.removeAllListeners();
                         if (MyAdapter.T(transform) === 'function')
                             data = transform(data);
                         if (opt.json) {
@@ -856,9 +864,9 @@ class MyAdapter {
             function err(e, msg) {
                 if (!msg)
                     msg = e;
-//                if (res) res.removeAllListeners();
+                //                if (res) res.removeAllListeners();
                 //                req && req.removeAllListeners();
-//                if (req && !req.aborted) req.abort();
+                //                if (req && !req.aborted) req.abort();
                 //                res && res.destroy();
                 //                MyAdapter.Df('err in response: %s = %O', msg);
                 return reject(msg);
