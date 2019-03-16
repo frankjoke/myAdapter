@@ -455,6 +455,10 @@ class MyAdapter {
         return slog(adapter, 'error', this.f.apply(null, arguments));
     }
 
+    static number(v) {
+        return isNaN(Number(v)) ? 0 : Number(v);
+    }
+
     static set addq(promise) {
         stq.p = promise;
         return stq;
