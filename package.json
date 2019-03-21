@@ -1,6 +1,6 @@
 {
   "name": "@frankjoke/myadapter",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "frankjoke's ioBroker-Adapter integration file",
   "main": "myAdapter.js",
   "scripts": {
