@@ -1025,10 +1025,8 @@ class MyAdapter {
     static cleanup() {
         //        .then(() => A.I(A.F(A.sstate)))
         //        .then(() => A.I(A.F(A.ownKeysSorted(A.states))))
-        return this.getObjectList({
-            startkey: this.ain,
-            endkey: this.ain + '\u9999'
-        }).then(res => this.seriesOf(res.rows, item => { // clean all states which are not part of the list
+        return this.getObjectList('*')
+            .then(res => this.seriesOf(res.rows, item => { // clean all states which are not part of the list
             //            this.I(`Check ${this.O(item)}`);
             let id = item.id.slice(this.ain.length);
             //            this.I(`check state ${item.id} and ${id}: ${this.states[item.id]} , ${this.states[id]}`);
