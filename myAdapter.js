@@ -224,12 +224,12 @@ class MyAdapter {
 
 
         this.Df('Adapter %s starting.', this.ains);
-        this.getObjectList = adapter.objects.getObjectListAsync.bind(adapter.objects);
+        this.getObjectList = this.c2p(adapter.objects.getObjectList);
         this.getForeignState = adapter.getForeignStateAsync.bind(adapter);
         this.setForeignState = adapter.setForeignStateAsync.bind(adapter);
         this.getState = adapter.getStateAsync.bind(adapter);
         this.setState = adapter.setStateAsync.bind(adapter);
-        this.getStates = adapter.getStatesAsync.bind(adapter);
+        this.getStates = adapter.getStatesAsync;
 
         return this.getStates('*').then(res => {
                 states = res;
@@ -242,7 +242,9 @@ class MyAdapter {
                 .then(res => res.rows.length > 0 ? this.D(`will remove ${res.rows.length} old states!`, res) : res)
                 .then(res => this.seriesOf(res.rows, (i) => this.removeState(i.doc.common.name), 2))
                 .then(res => res, err => this.E('err from MyAdapter.series: ' + err))
-                .then(() => this.getObjectList('*'))
+                .then(() => this.getObjectList({
+                    include_docs: true
+                }))
                 .then(res => {
                     res = res && res.rows ? res.rows : [];
                     objects = {};
