@@ -220,8 +220,16 @@ class MyAdapter {
             .then(() => this.c2p(adapter.getMessage)().then(obj => obj ? this.processMessage(obj) : true));
     }
 
-    static initAdapter() {
+    static getObjects(name) {
+        name = !name ? '' : name;
+        return this.getObjectList({
+            include_docs: true,
+            startkey: this.ain + name,
+            endkey: this.ain + name + '\u9999'
+        }).then(res => res && res.rows ? res.rows : [], () => []);
+    }
 
+    static initAdapter() {
 
         this.Df('Adapter %s starting.', this.ains);
         this.getObjectList = this.c2p(adapter.objects.getObjectList);
@@ -238,15 +246,12 @@ class MyAdapter {
                     this.resolve({
                         rows: []
                     }) :
-                    this.getObjectList('*'))
-                .then(res => res.rows.length > 0 ? this.D(`will remove ${res.rows.length} old states!`, res) : res)
-                .then(res => this.seriesOf(res.rows, (i) => this.removeState(i.doc.common.name), 2))
-                .then(res => res, err => this.E('err from MyAdapter.series: ' + err))
-                .then(() => this.getObjectList({
-                    include_docs: true
-                }))
+                    this.getObjects())
+                .then(res => reslength > 0 ? this.D(`will remove ${res.length} old states!`, res) : res)
+                .then(res => this.seriesOf(res, (i) => this.removeState(i.doc.common.name), 2)
+                    .then(res => res, err => this.E('err from MyAdapter.series: ' + err)))
+                .then(() => this.getObjects())
                 .then(res => {
-                    res = res && res.rows ? res.rows : [];
                     objects = {};
                     for (let i of res) {
                         var o = i.doc;
@@ -262,7 +267,7 @@ class MyAdapter {
                         adapter.config.longitude = parseFloat(objects['system.config'].common.longitude);
                     }
                     return res.length;
-                }, err => this.E('err from getObjectList: ' + err, 0))
+                }, err => this.E('err from getObjects: ' + err, 0))
                 .then(len => MyAdapter.D(`${adapter.name} received ${len} objects and ${this.ownKeys(states).length} states, with config ${this.ownKeys(adapter.config)}`), (err => this.W(`Error in adapter.ready: ${err}`)))
                 .then(() => allStates ? this.c2p(adapter.subscribeForeignStates)('*') : null)
                 .then(() => stateChange ? MyAdapter.c2p(adapter.subscribeStates)('*') : null)
@@ -374,9 +379,9 @@ class MyAdapter {
         return res;
     }
 
-    static  pE(x, y) {
+    static pE(x, y) {
         y = y ? y : pE;
-    
+
         function get() {
             var oldLimit = Error.stackTraceLimit;
             Error.stackTraceLimit = Infinity;
@@ -391,11 +396,11 @@ class MyAdapter {
             Error.stackTraceLimit = oldLimit;
             return stack.map(site => site.getFileName() ? (site.getFunctionName() || 'anonymous') + ' in ' + site.getFileName() + ' @' + site.getLineNumber() + ':' + site.getColumnNumber() : '');
         }
-    
+
         A.If('Promise failed @ %O error: %o', get().join('; '), x);
         return x;
     }
-    
+
     static nop(obj) {
         return obj;
     }
@@ -1022,22 +1027,23 @@ class MyAdapter {
             .catch(err => this.D(`MS ${this.O(err)}`, id));
     }
 
-    static cleanup() {
+    static cleanup(name) {
         //        .then(() => A.I(A.F(A.sstate)))
         //        .then(() => A.I(A.F(A.ownKeysSorted(A.states))))
-        return this.getObjectList('*')
-            .then(res => this.seriesOf(res.rows, item => { // clean all states which are not part of the list
-            //            this.I(`Check ${this.O(item)}`);
-            let id = item.id.slice(this.ain.length);
-            //            this.I(`check state ${item.id} and ${id}: ${this.states[item.id]} , ${this.states[id]}`);
-            if (this.states[item.id] || this.states[id])
-                return Promise.resolve();
-            //            this.I(`Delete ${this.O(item)}`);
-            return this.deleteState(id)
-                .then(() => this.D(`Del State: ${id}`), err => this.D(`Del State err: ${this.O(err)}`)) ///TC
-                .then(() => this.delObject(id))
-                .then(() => this.D(`Del Object: ${id}`), err => this.D(`Del Object err: ${this.O(err)}`)); ///TC
-        }, 10));
+        return this.getObjects(name)
+            .then(res => this.seriesOf(res, item => { // clean all states which are not part of the list
+                //            this.I(`Check ${this.O(item)}`);
+                let id = item.id.slice(this.ain.length);
+                //            this.I(`check state ${item.id} and ${id}: ${this.states[item.id]} , ${this.states[id]}`);
+                if (!name)
+                    if (this.states[item.id] || this.states[id])
+                        return Promise.resolve();
+                //            this.I(`Delete ${this.O(item)}`);
+                return this.deleteState(id)
+                    .then(() => this.D(`Del State & object: ${id}`), err => this.D(`Del State err: ${this.O(err)}`)) ///TC
+                    .then(() => this.delObject(id))
+                    .catch(err => this.D(`Del Object err: ${this.O(err)}`)); ///TC
+            }, 10));
 
     }
 
