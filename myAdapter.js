@@ -3,7 +3,7 @@
  *      (c) 2019- <frankjoke@hotmail.com>
  *      MIT License
  * 
- *  V 1.0.0 March 2019
+ *  V 1.1.0 April 2019
  */
 "use strict";
 
@@ -222,11 +222,16 @@ class MyAdapter {
 
     static getObjects(name) {
         name = !name ? '' : name;
-        return this.getObjectList({
-            include_docs: true,
-            startkey: this.ain + name,
-            endkey: this.ain + name + '\u9999'
-        }).then(res => res && res.rows ? res.rows : [], () => []);
+        let opt = {
+            include_docs: true
+        };
+        if (name) {
+            name = name === '*' ? '' : name;
+            opt.startkey = this.ain + name;
+            opt.endkey = this.ain + name + '\u9999';
+        }
+        return this.getObjectList(opt)
+            .then(res => res && res.rows ? res.rows : [], () => []);
     }
 
     static initAdapter() {
@@ -242,38 +247,37 @@ class MyAdapter {
         return this.getStates('*').then(res => {
                 states = res;
             }, err => this.W(err))
-            .then(() => (!adapter.config.forceinit ?
-                    this.resolve({
-                        rows: []
-                    }) :
-                    this.getObjects())
-                .then(res => reslength > 0 ? this.D(`will remove ${res.length} old states!`, res) : res)
-                .then(res => this.seriesOf(res, (i) => this.removeState(i.doc.common.name), 2)
-                    .then(res => res, err => this.E('err from MyAdapter.series: ' + err)))
-                .then(() => this.getObjects())
-                .then(res => {
-                    objects = {};
-                    for (let i of res) {
-                        var o = i.doc;
-                        objects[i.doc._id] = o;
-                        if (o.type === 'state' && o.common.name && !i.doc._id.startsWith('system.adapter.'))
-                            addSState(o.common.name, i.doc._id);
-                    }
-                    systemconf = objects['system.config'];
-                    if (objects['system.config'] && objects['system.config'].common.language)
-                        adapter.config.lang = objects['system.config'].common.language;
-                    if (objects['system.config'] && objects['system.config'].common.latitude) {
-                        adapter.config.latitude = parseFloat(objects['system.config'].common.latitude);
-                        adapter.config.longitude = parseFloat(objects['system.config'].common.longitude);
-                    }
-                    return res.length;
-                }, err => this.E('err from getObjects: ' + err, 0))
-                .then(len => MyAdapter.D(`${adapter.name} received ${len} objects and ${this.ownKeys(states).length} states, with config ${this.ownKeys(adapter.config)}`), (err => this.W(`Error in adapter.ready: ${err}`)))
-                .then(() => allStates ? this.c2p(adapter.subscribeForeignStates)('*') : null)
-                .then(() => stateChange ? MyAdapter.c2p(adapter.subscribeStates)('*') : null)
-                //                .then(() => objChange ? MyAdapter.c2p(adapter.subscribeObjects)('*').then(a => MyAdapter.I('eso '+a),a => MyAdapter.I('eso '+a)) : MyAdapter.resolve())
-                .then(() => objChange ? adapter.subscribeObjects('*') : null)
-            ).then(() => this.I(aname + ' initialization started...'), e => this.stop(this.E(aname + ' Initialization Error:' + this.F(e))));
+            .then(() => this.wait(200))
+            .then(() => this.getObjects().then(res => this.seriesOf(res, i => {
+                var o = i.doc;
+                objects[o._id] = o;
+                if (o.type === 'state' && o.common.name) {
+                    if (adapter.config.forceinit && o._id.startsWith(this.ain))
+                        return this.removeState(o.common.name);
+                    if (!o._id.startsWith('system.adapter.'))
+                        return addSState(o.common.name, o._id);
+                }
+                return true;
+            }, 0).catch(this.pE).then(() => {
+                systemconf = objects['system.config'];
+                if (systemconf && systemconf.common.language)
+                    adapter.config.lang = systemconf.common.language;
+                if (systemconf && systemconf.common.latitude) {
+                    adapter.config.latitude = parseFloat(systemconf.common.latitude);
+                    adapter.config.longitude = parseFloat(systemconf.common.longitude);
+                }
+                if (adapter.config.forceinit)
+                    this.seriesOf(res, (i) => this.removeState(i.doc.common.name), 2)
+                //                this.If('loaded adapter config: %O', adapter.config);
+                return res.length;
+            }))).catch(err => this.E('err from getObjects: ' + err, 0))
+
+            .then(len => MyAdapter.D(`${adapter.name} received ${len} objects and ${this.ownKeys(states).length} states, with config ${this.ownKeys(adapter.config)}`), (err => this.W(`Error in adapter.ready: ${err}`)))
+            .then(() => allStates ? this.c2p(adapter.subscribeForeignStates)('*') : null)
+            .then(() => stateChange ? MyAdapter.c2p(adapter.subscribeStates)('*') : null)
+            //                .then(() => objChange ? MyAdapter.c2p(adapter.subscribeObjects)('*').then(a => MyAdapter.I('eso '+a),a => MyAdapter.I('eso '+a)) : MyAdapter.resolve())
+            .then(() => objChange ? adapter.subscribeObjects('*') : null)
+            .then(() => this.I(aname + ' initialization started...'), e => this.stop(this.E(aname + ' Initialization Error:' + this.F(e))));
     }
 
     static clearStates() {
@@ -294,13 +298,13 @@ class MyAdapter {
             // or start the instance directly
             adapter = startAdapter(options);
         }
-
-        options.error = (err) => {
-            this.Ef('Error was catched by Adapter: should check installation or restart: %O', err);
-            this.stop(1);
-            return true;
-        };
-
+        /*
+                options.error = (err) => {
+                    this.Ef('Error was catched by Adapter: should check installation or restart: %O', err);
+                    this.stop(1);
+                    return true;
+                };
+        */
         assert(adapter && adapter.name, 'myAdapter:(adapter) no adapter here!');
         aname = adapter.name;
         if (typeof ori_main !== 'function')
@@ -380,7 +384,7 @@ class MyAdapter {
     }
 
     static pE(x, y) {
-        y = y ? y : pE;
+        y = y ? y : this.pE;
 
         function get() {
             var oldLimit = Error.stackTraceLimit;
@@ -397,7 +401,7 @@ class MyAdapter {
             return stack.map(site => site.getFileName() ? (site.getFunctionName() || 'anonymous') + ' in ' + site.getFileName() + ' @' + site.getLineNumber() + ':' + site.getColumnNumber() : '');
         }
 
-        A.If('Promise failed @ %O error: %o', get().join('; '), x);
+        this.Wf('Promise failed @ %O error: %o', get().join('; '), x);
         return x;
     }
 
@@ -713,8 +717,10 @@ class MyAdapter {
     static stop(dostop, callback) { // dostop 
         if (stopping) return;
         stopping = true;
-        if (onStop)
-            onStop(dostop);
+        try {
+            if (onStop)
+                onStop(dostop);
+        } catch (e) {}
         if (timer) {
             if (Array.isArray(timer))
                 timer.forEach(t => clearInterval(t));
@@ -724,8 +730,9 @@ class MyAdapter {
         }
         this.I(`Adapter disconnected and stopped with dostop(${dostop}) and callback(${!!callback})`);
         Promise.resolve(unload ? unload(dostop) : null)
+            .catch(e => this.Wf(e))
             .then(() => callback && callback())
-            .catch(e => this.W(e))
+            .catch(e => this.Wf(e))
             .then(() => this.W(`Adapter will exit in latest 1 sec with code ${dostop}!`, setTimeout(ret => adapter && adapter.terminate ? adapter.terminate(ret) : process.exit(ret), 900, dostop < 0 ? 0 : dostop)));
     }
 
@@ -946,14 +953,21 @@ class MyAdapter {
     }
 
     static changeState(id, value, ack, always) {
+        //        this.If('ChangeState got called on %s with ack:%s = %O', id,ack,value)
         if (value === undefined) return this.resolve();
         assert(typeof id === 'string', 'changeState (id,,,) error: id is not a string!');
         always = always === undefined ? false : !!always;
         ack = ack === undefined ? true : !!ack;
-        return this.getState(id)
-            .then(st => st && !always && this.equal(st.val, value) && st.ack === ack ?
-                this.resolve() : this.setState(id, value, ack))
-            .catch(err => this.W(`Error in MyAdapter.setState(${id},${value},${ack}): ${err}`, this.setState(id, value, ack)));
+        return (this.states[id] ? Promise.resolve(this.states[id]) : this.getState(id).then(st => this.states[st] = st, () => null))
+            .then(st => st && !always && this.equal(st.val, value) && st.ack === ack && ack ? this.resolve(st) :
+                this.setState(id, value, ack).then(this.nop, this.setState(id, value, ack))
+                .then(() => {
+                    if (states[id]) {
+                        states[id].val = value;
+                        states[id].ack = ack;
+                    }
+                    this.Df('ChangeState ack:%s of %s = %s', ack, id, value);
+                }, err => this.W(`Error in MyAdapter.setState(${id},${value},${ack}): ${err}`)));
     }
 
     static getClass(obj) {
@@ -982,7 +996,7 @@ class MyAdapter {
 
     static makeState(ido, value, ack, always, define) {
         ack = ack === undefined || !!ack;
-        //        this.D(`Make State ${this.O(ido)} and set value to:${this.O(value)} ack:${ack}`); ///TC
+        //                this.Df(`Make State %s and set value to:%O ack:%s`,typeof ido === 'string' ? ido : ido.id,value,ack); ///TC
         let id = ido;
         if (typeof id === 'string')
             ido = id.endsWith('Percent') ? {
@@ -995,7 +1009,7 @@ class MyAdapter {
         if ((!define || typeof ido !== 'object') && (states[id] || states[this.ain + id]))
             return this.changeState(id, value, ack, always);
 
-        this.D(`Make State ack:${ack} ${id} = ${this.O(value)}`); ///TC
+        //        this.Df(`Make State ack:%s %s = %s`, ack, id, value); ///TC
         const st = {
             common: {
                 name: id, // You can add here some description
@@ -1020,7 +1034,7 @@ class MyAdapter {
             st.common.role = st.common.role.replace(/^value/, 'level');
         //    this.I(`will create state:${id} with ${this.O(st)}`);
         addSState(id, this.ain + id);
-        states[this.ain + id] = st;
+        states[this.ain + id] = states[id] = st;
         return this.extendObject(id, st, null)
             //            .then(x => states[id] = x)
             .then(() => st.common.state === 'state' ? this.changeState(id, value, ack, always) : true)
@@ -1031,19 +1045,23 @@ class MyAdapter {
         //        .then(() => A.I(A.F(A.sstate)))
         //        .then(() => A.I(A.F(A.ownKeysSorted(A.states))))
         return this.getObjects(name)
-            .then(res => this.seriesOf(res, item => { // clean all states which are not part of the list
-                //            this.I(`Check ${this.O(item)}`);
-                let id = item.id.slice(this.ain.length);
-                //            this.I(`check state ${item.id} and ${id}: ${this.states[item.id]} , ${this.states[id]}`);
-                if (!name)
-                    if (this.states[item.id] || this.states[id])
-                        return Promise.resolve();
-                //            this.I(`Delete ${this.O(item)}`);
-                return this.deleteState(id)
-                    .then(() => this.D(`Del State & object: ${id}`), err => this.D(`Del State err: ${this.O(err)}`)) ///TC
-                    .then(() => this.delObject(id))
-                    .catch(err => this.D(`Del Object err: ${this.O(err)}`)); ///TC
-            }, 10));
+            .then(res => {
+//                this.If('got items %O',res);
+                return this.seriesOf(res, item => { // clean all states which are not part of the list
+                    //            this.I(`Check ${this.O(item)}`);
+                    if (!item.id.startsWith(this.ain))
+                        return this.resolve();
+                    let id = item.id.slice(this.ain.length);
+                    //            this.I(`check state ${item.id} and ${id}: ${this.states[item.id]} , ${this.states[id]}`);
+                    if (!id || this.states[item.id] || this.states[id])
+                            return this.resolve();
+                    this.Df('Cleanup and delete item %s',id);
+                    return this.deleteState(id)
+                        .catch(err => this.D(`Del State err: ${this.O(err)}`)) ///TC
+                        .then(() => this.delObject(id))
+                        .catch(err => this.D(`Del Object err: ${this.O(err)}`)); ///TC
+                }, 10);
+            });
 
     }
 
