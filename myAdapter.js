@@ -384,7 +384,7 @@ class MyAdapter {
     }
 
     static pE(x, y) {
-        y = y ? y : this.pE;
+        y = y ? y : MyAdapter.pE;
 
         function get() {
             var oldLimit = Error.stackTraceLimit;
@@ -401,7 +401,7 @@ class MyAdapter {
             return stack.map(site => site.getFileName() ? (site.getFunctionName() || 'anonymous') + ' in ' + site.getFileName() + ' @' + site.getLineNumber() + ':' + site.getColumnNumber() : '');
         }
 
-        this.Wf('Promise failed @ %O error: %o', get().join('; '), x);
+        MyAdapter.Wf('Promise failed @ %O error: %o', get().join('; '), x);
         return x;
     }
 
