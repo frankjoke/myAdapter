@@ -266,8 +266,8 @@ class MyAdapter {
                     adapter.config.latitude = parseFloat(systemconf.common.latitude);
                     adapter.config.longitude = parseFloat(systemconf.common.longitude);
                 }
-                if (adapter.config.forceinit)
-                    this.seriesOf(res, (i) => this.removeState(i.doc.common.name), 2)
+//                if (adapter.config.forceinit)
+//                    this.seriesOf(res, (i) => this.removeState(i.doc.common.name), 2)
                 //                this.If('loaded adapter config: %O', adapter.config);
                 return res.length;
             }))).catch(err => this.E('err from getObjects: ' + err, 0))
