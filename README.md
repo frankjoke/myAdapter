@@ -5,7 +5,7 @@ It contains the main classes I use in all ioBroker projects
 
 ## log
 
-### 1.1.2
+### 1.1.3
 
 * new init and getObj routine
 
