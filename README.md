@@ -3,7 +3,12 @@
 My IoBroker Adapter stub file
 It contains the main classes I use in all ioBroker projects
 
-## log
+## Changelog
+
+### 1.1.5 
+
+* new init routine asking only for adapter objects and separately for system config object
+* Log message when adapter is in compact mode.
 
 ### 1.1.3
 
