@@ -5,7 +5,7 @@ It contains the main classes I use in all ioBroker projects
 
 ## Changelog
 
-### 1.1.5 
+### 1.1.5
 
 * new init routine asking only for adapter objects and separately for system config object
 * Log message when adapter is in compact mode
