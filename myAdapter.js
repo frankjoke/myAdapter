@@ -38,6 +38,7 @@ const util = require('util'),
     fs = require('fs'),
     exec = require('child_process').exec,
     dns = require('dns'),
+    os = require('os'),
     assert = require('assert');
 
 class Sequence {
@@ -1074,6 +1075,8 @@ class MyAdapter {
     }
 
     static isLinuxApp(name) {
+        if (os.platform()!=='linux')
+            return false;
         return this.exec('!which ' + name).then(x => x.length >= name.length, () => false);
     }
 }
@@ -1084,6 +1087,7 @@ MyAdapter._assert = assert;
 MyAdapter._http = http;
 MyAdapter._https = https;
 MyAdapter._url = url;
+MyAdapter._os = os;
 MyAdapter._dns = dns;
 MyAdapter._child_process = require('child_process');
 MyAdapter.Sequence = Sequence;
