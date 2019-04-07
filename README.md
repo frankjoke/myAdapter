@@ -12,7 +12,7 @@ It contains the main classes I use in all ioBroker projects
 * Change waitfunction to accept functions as arg
 * Change isLinuxApp to return true only o0n linux-os
 
-### 1.1.3 
+### 1.1.3
 
 * new init and getObj routine
 
