@@ -8,7 +8,9 @@ It contains the main classes I use in all ioBroker projects
 ### 1.1.5 
 
 * new init routine asking only for adapter objects and separately for system config object
-* Log message when adapter is in compact mode.
+* Log message when adapter is in compact mode
+* CHange waitfunction to accept functions as arg
+* Change isLinuxApp to return true only o0n linux-os
 
 ### 1.1.3
 
