@@ -13,19 +13,24 @@
 // you have to call the adapter function and pass a options object
 // name has to be set and has to be equal to adapters folder name and main file name excluding extension
 // adapter will be restarted automatically every time as the configuration changed, e.g system.adapter.template.0
-var adapter;
+var adapter, aoptions, aname, amain;
 
 function startAdapter(options) {
+    if (!options)
+        options = aoptions;
     options = options || {};
     if (typeof options === 'string')
         options = {
             name: options
         };
+    else options.name = aname;
     try {
         adapter = new require('@iobroker/adapter-core').Adapter(options);
+        MyAdapter.If('got following adapter: %O', options);
     } catch (e) {
-        MyAdapter.E('cannot find ioBroker...');
+        console.error('cannot find ioBroker...');
     }
+    MyAdapter.init2(adapter);
     return adapter;
 }
 
@@ -37,8 +42,8 @@ const util = require('util'),
     url = require('url'),
     fs = require('fs'),
     exec = require('child_process').exec,
-    dns = require('dns'),
     os = require('os'),
+    dns = require('dns'),
     assert = require('assert');
 
 class Sequence {
@@ -77,7 +82,7 @@ class Sequence {
     }
 }
 
-let messages, timer, unload, aname, stopping = false,
+let messages, timer, unload, stopping = false,
     inDebug = false,
     curDebug = 1,
     allStates = null,
@@ -87,8 +92,7 @@ let messages, timer, unload, aname, stopping = false,
     objects = {},
     states = {},
     systemconf = null,
-    stq = new Sequence();
-const
+    stq = new Sequence(),
     sstate = {},
     mstate = {};
 
@@ -134,7 +138,7 @@ class Setter { // fun = function returng a promise, min = minimal time in ms bet
     }
 }
 class CacheP {
-    constructor(fun) { // neue Einträge werden mit dieser Funktion kreiert
+    constructor(fun) { // neue EintrÃ¤ge werden mit dieser Funktion kreiert
         assert(!fun || typeof fun === 'function', 'Cache arg need to be a function returning a promise!');
         this._cache = {};
         this._fun = fun;
@@ -222,6 +226,11 @@ class MyAdapter {
             .then(() => this.c2p(adapter.getMessage)().then(obj => obj ? this.processMessage(obj) : true));
     }
 
+    static adapterExit(x) {
+        MyAdapter.Wf('Adapter will exit now with code %s and method %s!', x, adapter.terminate ? 'adapter.terminate' : 'process.exit');
+        adapter.terminate ? adapter.terminate(x) : process.exit(x);
+    }
+
     static getObjects(name) {
         name = !name ? '' : name;
         let opt = {
@@ -288,35 +297,47 @@ class MyAdapter {
 
     static init(amodule, options, ori_main) {
         //        assert(!adapter, `myAdapter:(${ori_adapter.name}) defined already!`);
-        if (typeof options === 'string')
-            options = {
-                name: options
-            };
-        options = Object.assign({}, options);
-
-        if (amodule && amodule.parent) {
-            amodule.exports = startAdapter;
-            console.log('Wait to start Adapter in compact mode:', options.name);
-        } else {
-            adapter = startAdapter(options);
-            this.If('Startted %s as own process!', options.name);
-        }
-        /*
-                options.error = (err) => {
-                    this.Ef('Error was catched by Adapter: should check installation or restart: %O', err);
-                    this.stop(1);
-                    return true;
-                };
-        */
-        assert(adapter && adapter.name, 'myAdapter:(adapter) no adapter here!');
-        aname = adapter.name;
         if (typeof ori_main !== 'function')
             ori_main = () => {
                 this.W(`No 'main() defined for ${adapter.name}!`);
                 this.stop(true);
             };
-        messages = (mes) => Promise.resolve(this.W(`Message ${this.O(mes)} received and no handler defined!`));
+        amain = ori_main;
+        if (typeof options === 'string')
+            options = {
+                name: options
+            };
+        aoptions = Object.assign({}, options);
+        aname = aoptions.name;
+        if (amodule && amodule.parent) {
+            amodule.exports = startAdapter;
+        } else {
+            /*
+                    options.error = (err) => {
+                        this.Ef('Error was catched by Adapter: should check installation or restart: %O', err);
+                        this.stop(1);
+                        return true;
+                    };
+            */
+            adapter = startAdapter(options);
+        }
+    }
 
+    static init2() {
+        //            if (adapter) this.If('adpter: %O',adapter);
+        assert(adapter && adapter.name, 'myAdapter:(adapter) no adapter here!');
+        aname = adapter.name;
+
+        inDebug = messages = timer = unload = stopping = false;
+        curDebug = 1;
+        systemconf = allStates = stateChange = objChange = onStop = null;
+        objects = {};
+        states = {};
+        stq = new Sequence();
+        sstate = {};
+        mstate = {};
+
+        messages = (mes) => Promise.resolve(this.W(`Message ${this.O(mes)} received and no handler defined!`));
 
         this.writeFile = this.c2p(fs.writeFile);
         this.readFile = this.c2p(fs.readFile);
@@ -340,7 +361,7 @@ class MyAdapter {
 
         adapter.on('message', obj => obj && this.processMessage(this.D(`received Message ${this.O(obj)}`, obj)))
             .on('unload', callback => this.stop(false, callback))
-            .on('ready', () => this.resolve().then(() => this.initAdapter()).then(() => this.N(() => ori_main(this.I(aname + ' starting main...')), e => this.Ef('Adapter Error, stop: %O', e))))
+            .on('ready', () => this.resolve().then(() => this.initAdapter()).then(() => this.N(() => amain(this.I(aname + ' starting main...')), e => this.Ef('Adapter Error, stop: %O', e))))
             .on('objectChange', (id, obj) => obj && obj._id && objChange && setTimeout((id, obj) => objChange(id, obj), 0, id, obj))
             .on('stateChange', (id, state) => setTimeout((id, state) => {
                 (state && stateChange && state.from !== 'system.adapter.' + this.ains ?
@@ -601,7 +622,7 @@ class MyAdapter {
             time = 0;
         if (typeof arg === 'function') {
             let args = Array.prototype.slice.call(arguments, 2);
-            return new Promise(res => setTimeout(r => res(arg.apply(null,args)), time));
+            return new Promise(res => setTimeout(r => res(arg.apply(null, args)), time));
         }
         return new Promise(res => setTimeout(res, time, arg));
     }
@@ -742,7 +763,7 @@ class MyAdapter {
             .catch(e => this.Wf(e))
             .then(() => callback && callback())
             .catch(e => this.Wf(e))
-            .then(() => this.W(`Adapter will exit in latest 1 sec with code ${dostop}!`, setTimeout(ret => adapter && adapter.terminate ? adapter.terminate(ret) : process.exit(ret), 900, dostop < 0 ? 0 : dostop)));
+            .then(() => this.W(`Adapter will exit in latest 1 sec with code ${dostop}!`, setTimeout(this.adapterExit, 900, dostop < 0 ? 0 : dostop)));
     }
 
     static seriesOf(obj, promfn, delay) { // fun gets(item) and returns a promise
@@ -822,7 +843,7 @@ class MyAdapter {
             .then(() => this.while(fw, fn, time));
     }
 
-    static repeat( /** number */ nretry, /** function */ fn, arg, len) {
+    static repeat( /** number */ nretry, /** function */ fn, arg, /** number */ len) {
         assert(typeof fn === 'function', 'repeat (,fn,) error: fn is not a function!');
         nretry = parseInt(nretry) || 0;
         return fn(arg)
@@ -1087,8 +1108,8 @@ MyAdapter._assert = assert;
 MyAdapter._http = http;
 MyAdapter._https = https;
 MyAdapter._url = url;
-MyAdapter._os = os;
 MyAdapter._dns = dns;
+MyAdapter._os = os;
 MyAdapter._child_process = require('child_process');
 MyAdapter.Sequence = Sequence;
 MyAdapter.Setter = Setter;

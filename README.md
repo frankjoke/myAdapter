@@ -5,12 +5,13 @@ It contains the main classes I use in all ioBroker projects
 
 ## Changelog
 
-### 1.1.5
+### 1.1.6
 
 * new init routine asking only for adapter objects and separately for system config object
 * Log message when adapter is in compact mode
 * Change waitfunction to accept functions as arg
 * Change isLinuxApp to return true only o0n linux-os
+* Prepared for compact mode
 
 ### 1.1.3
 
