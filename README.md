@@ -5,6 +5,10 @@ It contains the main classes I use in all ioBroker projects
 
 ## Changelog
 
+### 1.2.0
+
+* Added feature to use timestamp instead of ack in makestate/changestate to update state with other (old) timestamp
+
 ### 1.1.6
 
 * new init routine asking only for adapter objects and separately for system config object

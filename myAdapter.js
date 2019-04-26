@@ -227,8 +227,8 @@ class MyAdapter {
     }
 
     static adapterExit(x) {
-        MyAdapter.Wf('Adapter will exit now with code %s and method %s!', x, adapter.terminate ? 'adapter.terminate' : 'process.exit');
-        adapter.terminate ? adapter.terminate(x) : process.exit(x);
+        MyAdapter.Df('Adapter will exit now with code %s and method %s!', x, adapter && adapter.terminate ? 'adapter.terminate' : 'process.exit');
+        adapter && adapter.terminate ? adapter.terminate(x) : process.exit(x);
     }
 
     static getObjects(name) {
@@ -987,14 +987,22 @@ class MyAdapter {
         if (value === undefined) return this.resolve();
         assert(typeof id === 'string', 'changeState (id,,,) error: id is not a string!');
         always = always === undefined ? false : !!always;
+        let ts = typeof ack === 'number' ? ack : undefined;
         ack = ack === undefined ? true : !!ack;
+        let stn = {
+            val: value,
+            ack: ack            
+        }
+        if (ts) stn.ts = ts;
         return (this.states[id] ? Promise.resolve(this.states[id]) : this.getState(id).then(st => this.states[st] = st, () => null))
             .then(st => st && !always && this.equal(st.val, value) && st.ack === ack && ack ? this.resolve(st) :
-                this.setState(id, value, ack).then(this.nop, this.setState(id, value, ack))
+                this.setState(id, stn).then(this.nop, this.setState(id, stn))
                 .then(() => {
                     if (states[id]) {
                         states[id].val = value;
                         states[id].ack = ack;
+                        if (ts)
+                            states[id].ts = ts;
                     }
                     this.Df('ChangeState ack:%s of %s = %s', ack, id, value);
                 }, err => this.W(`Error in MyAdapter.setState(${id},${value},${ack}): ${err}`)));
@@ -1025,7 +1033,7 @@ class MyAdapter {
 
 
     static makeState(ido, value, ack, always, define) {
-        ack = ack === undefined || !!ack;
+//        ack = ack === undefined || !!ack;
         //                this.Df(`Make State %s and set value to:%O ack:%s`,typeof ido === 'string' ? ido : ido.id,value,ack); ///TC
         let id = ido;
         if (typeof id === 'string')
