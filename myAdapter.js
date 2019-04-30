@@ -82,7 +82,7 @@ class Sequence {
     }
 }
 
-let messages, timer, unload, stopping = false,
+let timer, unload, stopping = false,
     inDebug = false,
     curDebug = 1,
     allStates = null,
@@ -95,6 +95,7 @@ let messages, timer, unload, stopping = false,
     stq = new Sequence(),
     sstate = {},
     mstate = {};
+let messages = (mes) => Promise.resolve(MyAdapter.W(`Message ${this.O(mes)} received and no handler defined!`));
 
 function slog(adapter, log, text) {
     if (inDebug === undefined)
@@ -348,7 +349,7 @@ class MyAdapter {
         assert(adapter && adapter.name, 'myAdapter:(adapter) no adapter here!');
         aname = adapter.name;
 
-        inDebug = messages = timer = unload = stopping = false;
+        inDebug = timer = stopping = false;
         curDebug = 1;
         systemconf =  null;
         objects = {};
@@ -356,8 +357,6 @@ class MyAdapter {
         stq = new Sequence();
         sstate = {};
         mstate = {};
-
-        messages = (mes) => Promise.resolve(this.W(`Message ${this.O(mes)} received and no handler defined!`));
 
         this.writeFile = this.c2p(fs.writeFile);
         this.readFile = this.c2p(fs.readFile);
