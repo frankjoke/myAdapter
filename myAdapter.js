@@ -92,6 +92,7 @@ let messages, timer, unload, stopping = false,
     objects = {},
     states = {},
     systemconf = null,
+    adapterconf = null,
     stq = new Sequence(),
     sstate = {},
     mstate = {};
@@ -218,6 +219,10 @@ class MyAdapter {
         return systemconf;
     }
 
+    static get adapterConfig() {
+        return adapterconf;
+    }
+
     static processMessage(obj) {
         return (obj.command === 'debug' ? this.resolve(`debug set to '${inDebug = isNaN(parseInt(obj.message)) ?  this.parseLogic(obj.message) : parseInt(obj.message)}'`) : messages(obj))
             .then(res => this.D(`Message from '${obj.from}', command '${obj.command}', message '${this.S(obj.message)}' executed with result:"${this.S(res)}"`, res),
@@ -258,30 +263,50 @@ class MyAdapter {
         return this.getStates('*').then(res => {
                 states = res;
             }, err => this.W(err))
-            .then(() => this.wait(200))
             .then(() => this.getObjects('*').then(res => this.seriesOf(res, i => {
-                var o = i.doc;
-                objects[o._id] = o;
-                if (o.type === 'state' && o.common.name) {
-                    if (adapter.config.forceinit && o._id.startsWith(this.ain))
-                        return this.removeState(o.common.name);
-                    //                    if (!o._id.startsWith('system.adapter.'))
-                    return addSState(o.common.name, o._id);
-                }
-                return true;
-            }, 0).catch(this.pE).then(() => this.getObjects('system.config')).then(res => {
-                systemconf = res[0].doc;
-                if (systemconf && systemconf.common.language)
-                    adapter.config.lang = systemconf.common.language;
-                if (systemconf && systemconf.common.latitude) {
-                    adapter.config.latitude = parseFloat(systemconf.common.latitude);
-                    adapter.config.longitude = parseFloat(systemconf.common.longitude);
-                }
-                //                if (adapter.config.forceinit)
-                //                    this.seriesOf(res, (i) => this.removeState(i.doc.common.name), 2)
-                //                this.If('loaded adapter config: %O', adapter.config);
-                return res.length;
-            }))).catch(err => this.E('err from getObjects: ' + err, 0))
+                    var o = i.doc;
+                    objects[o._id] = o;
+                    if (o.type === 'state' && o.common.name) {
+                        if (adapter.config.forceinit && o._id.startsWith(this.ain))
+                            return this.removeState(o.common.name);
+                        //                    if (!o._id.startsWith('system.adapter.'))
+                        return addSState(o.common.name, o._id);
+                    }
+                    return true;
+                }, 0).catch(this.pE)
+                .then(() => this.getForeignObject('system.config')).then(res => {
+                    //                    systemconf = res[0].doc;
+                    if (res)
+                        systemconf = res.common;
+                    //                    this.If('systemconf: %O', systemconf);
+                    if (systemconf && systemconf.language)
+                        adapter.config.lang = systemconf.language;
+                    if (systemconf && systemconf.latitude) {
+                        adapter.config.latitude = parseFloat(systemconf.latitude);
+                        adapter.config.longitude = parseFloat(systemconf.longitude);
+                    }
+                    //                if (adapter.config.forceinit)
+                    //                    this.seriesOf(res, (i) => this.removeState(i.doc.common.name), 2)
+                    //                this.If('loaded adapter config: %O', adapter.config);
+                    return res.length;
+                }, MyAdapter.nop)
+                .then(() => this.getForeignObject('system.adapter.' + this.ains)).then(res => {
+                    //                    adapterconf = res[0].doc;
+                    if (res)
+                        adapterconf = res.common;
+                    //                    this.If('adapterconf = %s: %O', 'system.adapter.' + this.ains, adapterconf);
+                    //                    this.If('adapter: %O', adapter);
+                    if (adapterconf && adapterconf.loglevel)
+                        adapter.config.loglevel = adapterconf.loglevel;
+                    if (adapter.config.loglevel === 'debug' || adapter.config.loglevel === 'silly')
+                        this.debug = true;
+                    //                    this.If('loglevel: %s, debug: %s', adapter.config.loglevel, MyAdapter.debug);
+                    //                if (adapter.config.forceinit)
+                    //                    this.seriesOf(res, (i) => this.removeState(i.doc.common.name), 2)
+                    //                this.If('loaded adapter config: %O', adapter.config);
+                    return res.length;
+                }, MyAdapter.nop)
+            )).catch(err => this.E('err from getObjects: ' + err, 0))
 
             .then(len => MyAdapter.D(`${adapter.name} received ${len} objects and ${this.ownKeys(states).length} states, with config ${this.ownKeys(adapter.config)}`), (err => this.W(`Error in adapter.ready: ${err}`)))
             .then(() => allStates ? this.c2p(adapter.subscribeForeignStates)('*') : null)
@@ -361,7 +386,7 @@ class MyAdapter {
 
         adapter.on('message', obj => obj && this.processMessage(this.D(`received Message ${this.O(obj)}`, obj)))
             .on('unload', callback => this.stop(false, callback))
-            .on('ready', () => this.resolve().then(() => this.initAdapter()).then(() => this.N(() => amain(this.I(aname + ' starting main...')), e => this.Ef('Adapter Error, stop: %O', e))))
+            .on('ready', () => this.resolve().then(() => this.initAdapter()).then(() => setImmediate(amain), e => this.Ef('Adapter Error, stop: %O', e)))
             .on('objectChange', (id, obj) => obj && obj._id && objChange && setTimeout((id, obj) => objChange(id, obj), 0, id, obj))
             .on('stateChange', (id, state) => setTimeout((id, state) => {
                 (state && stateChange && state.from !== 'system.adapter.' + this.ains ?
@@ -991,7 +1016,7 @@ class MyAdapter {
         ack = ack === undefined ? true : !!ack;
         let stn = {
             val: value,
-            ack: ack            
+            ack: ack
         }
         if (ts) stn.ts = ts;
         return (this.states[id] ? Promise.resolve(this.states[id]) : this.getState(id).then(st => this.states[st] = st, () => null))
@@ -1033,7 +1058,7 @@ class MyAdapter {
 
 
     static makeState(ido, value, ack, always, define) {
-//        ack = ack === undefined || !!ack;
+        //        ack = ack === undefined || !!ack;
         //                this.Df(`Make State %s and set value to:%O ack:%s`,typeof ido === 'string' ? ido : ido.id,value,ack); ///TC
         let id = ido;
         if (typeof id === 'string')
@@ -1104,7 +1129,7 @@ class MyAdapter {
     }
 
     static isLinuxApp(name) {
-        if (os.platform()!=='linux')
+        if (os.platform() !== 'linux')
             return false;
         return this.exec('!which ' + name).then(x => x.length >= name.length, () => false);
     }
