@@ -350,7 +350,7 @@ class MyAdapter {
 
         inDebug = messages = timer = unload = stopping = false;
         curDebug = 1;
-        systemconf = allStates = stateChange = objChange = onStop = null;
+        systemconf =  null;
         objects = {};
         states = {};
         stq = new Sequence();
