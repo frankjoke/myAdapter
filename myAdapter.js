@@ -92,7 +92,6 @@ let messages, timer, unload, stopping = false,
     objects = {},
     states = {},
     systemconf = null,
-    adapterconf = null,
     stq = new Sequence(),
     sstate = {},
     mstate = {};
@@ -219,10 +218,6 @@ class MyAdapter {
         return systemconf;
     }
 
-    static get adapterConfig() {
-        return adapterconf;
-    }
-
     static processMessage(obj) {
         return (obj.command === 'debug' ? this.resolve(`debug set to '${inDebug = isNaN(parseInt(obj.message)) ?  this.parseLogic(obj.message) : parseInt(obj.message)}'`) : messages(obj))
             .then(res => this.D(`Message from '${obj.from}', command '${obj.command}', message '${this.S(obj.message)}' executed with result:"${this.S(res)}"`, res),
@@ -293,11 +288,11 @@ class MyAdapter {
                 .then(() => this.getForeignObject('system.adapter.' + this.ains)).then(res => {
                     //                    adapterconf = res[0].doc;
                     if (res)
-                        adapterconf = res.common;
+                    adapter.config.adapterConf = res.common;
                     //                    this.If('adapterconf = %s: %O', 'system.adapter.' + this.ains, adapterconf);
                     //                    this.If('adapter: %O', adapter);
-                    if (adapterconf && adapterconf.loglevel)
-                        adapter.config.loglevel = adapterconf.loglevel;
+                    if (adapter.config.adapterConf && adapter.config.adapterConf.loglevel)
+                        adapter.config.loglevel = adapter.config.adapterConf.loglevel;
                     if (adapter.config.loglevel === 'debug' || adapter.config.loglevel === 'silly')
                         this.debug = true;
                     //                    this.If('loglevel: %s, debug: %s', adapter.config.loglevel, MyAdapter.debug);
