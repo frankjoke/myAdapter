@@ -254,7 +254,7 @@ class MyAdapter {
         this.setForeignState = adapter.setForeignStateAsync.bind(adapter);
         this.getState = adapter.getStateAsync.bind(adapter);
         this.setState = adapter.setStateAsync.bind(adapter);
-        this.getStates = adapter.getStatesAsync;
+        this.getStates = adapter.getStatesAsync.bind(adapter);
 
         return this.getStates('*').then(res => {
                 states = res;
