@@ -249,12 +249,12 @@ class MyAdapter {
     static initAdapter() {
 
         this.Df('Adapter %s starting.', this.ains);
-        this.getObjectList = this.c2p(adapter.objects.getObjectList);
+        this.getObjectList = this.c2pBind(adapter.objects.getObjectList, adapter.objects);
         this.getForeignState = adapter.getForeignStateAsync.bind(adapter);
         this.setForeignState = adapter.setForeignStateAsync.bind(adapter);
         this.getState = adapter.getStateAsync.bind(adapter);
         this.setState = adapter.setStateAsync.bind(adapter);
-        this.getStates = adapter.getStatesAsync;
+        this.getStates = adapter.getStatesAsync.bind(adapter);
 
         return this.getStates('*').then(res => {
                 states = res;
@@ -829,6 +829,14 @@ class MyAdapter {
         };
     }
 
+    static c2pBind(f,b) {
+        assert(typeof f === 'function', 'c2p (f) error: f is not a function!');
+        return function () {
+            const args = Array.prototype.slice.call(arguments);
+            return new Promise((res, rej) => (args.push((err, result) => (err && rej(err)) || res(result)), f.apply(this, args)));
+        }.bind(b);
+    }
+    
     static c1p(f) {
         assert(typeof f === 'function', 'c1p (f) error: f is not a function!');
         return function () {
