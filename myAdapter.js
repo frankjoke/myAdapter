@@ -249,7 +249,7 @@ class MyAdapter {
     static initAdapter() {
 
         this.Df('Adapter %s starting.', this.ains);
-        this.getObjectList = this.c2p(adapter.objects.getObjectList);
+        this.getObjectList = adapter.objects.getObjectListAsync.bind(adapter);
         this.getForeignState = adapter.getForeignStateAsync.bind(adapter);
         this.setForeignState = adapter.setForeignStateAsync.bind(adapter);
         this.getState = adapter.getStateAsync.bind(adapter);
