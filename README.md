@@ -5,6 +5,11 @@ It contains the main classes I use in all ioBroker projects
 
 ## Changelog
 
+### 1.2.5
+
+* Changed to newer @iobroker/adapter-core and removed to use 
+
+
 ### 1.2.0
 
 * Added feature to use timestamp instead of ack in makestate/changestate to update state with other (old) timestamp
