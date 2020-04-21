@@ -249,12 +249,14 @@ class MyAdapter {
     static initAdapter() {
 
         this.Df('Adapter %s starting.', this.ains);
-        this.getObjectList = adapter.objects.getObjectListAsync.bind(adapter);
+        this.getObjectList = adapter.objects.getObjectListAsync.bind(adapter.objects);
+        //this.c2pBind(adapter.objects.getObjectList, adapter.objects); 
+         // adapter.objects.getObjectListAsync.bind(adapter);
         this.getForeignState = adapter.getForeignStateAsync.bind(adapter);
         this.setForeignState = adapter.setForeignStateAsync.bind(adapter);
         this.getState = adapter.getStateAsync.bind(adapter);
         this.setState = adapter.setStateAsync.bind(adapter);
-        this.getStates = adapter.getStatesAsync;
+        this.getStates = adapter.getStatesAsync.bind(adapter);
 
         return this.getStates('*').then(res => {
                 states = res;
@@ -827,6 +829,14 @@ class MyAdapter {
             const args = Array.prototype.slice.call(arguments);
             return new Promise((res, rej) => (args.push((err, result) => (err && rej(err)) || res(result)), f.apply(this, args)));
         };
+    }
+
+    static c2pBind(f,b) {
+        assert(typeof f === 'function', 'c2p (f) error: f is not a function!');
+        return function () {
+            const args = Array.prototype.slice.call(arguments);
+            return new Promise((res, rej) => (args.push((err, result) => (err && rej(err)) || res(result)), f.apply(this, args)));
+        }.bind(b);
     }
 
     static c1p(f) {
