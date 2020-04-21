@@ -3,7 +3,7 @@
  *      (c) 2019- <frankjoke@hotmail.com>
  *      MIT License
  * 
- *  V 1.1.0 April 2019
+ *  V 1.2.5+ April 2020
  */
 "use strict";
 
