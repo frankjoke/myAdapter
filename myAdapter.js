@@ -249,9 +249,11 @@ class MyAdapter {
     static initAdapter() {
 
         this.Df('Adapter %s starting.', this.ains);
-        this.getObjectList = adapter.objects.getObjectListAsync.bind(adapter.objects);
+        this.getObjectList = adapter.getObjectListAsync ?
+            adapter.getObjectListAsync.bind(adapter) :
+            this.c2pBind(adapter.objects.getObjectList, adapter.objects);
         //this.c2pBind(adapter.objects.getObjectList, adapter.objects); 
-         // adapter.objects.getObjectListAsync.bind(adapter);
+        // adapter.objects.getObjectListAsync.bind(adapter);
         this.getForeignState = adapter.getForeignStateAsync.bind(adapter);
         this.setForeignState = adapter.setForeignStateAsync.bind(adapter);
         this.getState = adapter.getStateAsync.bind(adapter);
@@ -264,7 +266,7 @@ class MyAdapter {
             .then(() => this.getObjects('*').then(res => this.seriesOf(res, i => {
                     var o = i.doc;
                     objects[o._id] = o;
-                    if (o.type === 'state' && o.common.name) {
+                    if (o.type === 'state' && o.common && o.common.name) {
                         if (adapter.config.forceinit && o._id.startsWith(this.ain))
                             return this.removeState(o.common.name);
                         //                    if (!o._id.startsWith('system.adapter.'))
@@ -291,7 +293,7 @@ class MyAdapter {
                 .then(() => this.getForeignObject('system.adapter.' + this.ains)).then(res => {
                     //                    adapterconf = res[0].doc;
                     if (res)
-                    adapter.config.adapterConf = res.common;
+                        adapter.config.adapterConf = res.common;
                     //                    this.If('adapterconf = %s: %O', 'system.adapter.' + this.ains, adapterconf);
                     //                    this.If('adapter: %O', adapter);
                     if (adapter.config.adapterConf && adapter.config.adapterConf.loglevel)
@@ -353,7 +355,7 @@ class MyAdapter {
 
         inDebug = timer = stopping = false;
         curDebug = 1;
-        systemconf =  null;
+        systemconf = null;
         objects = {};
         states = {};
         stq = new Sequence();
@@ -831,7 +833,7 @@ class MyAdapter {
         };
     }
 
-    static c2pBind(f,b) {
+    static c2pBind(f, b) {
         assert(typeof f === 'function', 'c2p (f) error: f is not a function!');
         return function () {
             const args = Array.prototype.slice.call(arguments);

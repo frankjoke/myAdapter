@@ -5,10 +5,13 @@ It contains the main classes I use in all ioBroker projects
 
 ## Changelog
 
+### 1.2.6
+
+* added support for  "@iobroker/adapter-core": "^2.3.x" used for js-controller 3.0
+
 ### 1.2.5
 
 * Changed to newer @iobroker/adapter-core and removed to use 
-
 
 ### 1.2.0
 
