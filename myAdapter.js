@@ -3,7 +3,7 @@
  *      (c) 2019- <frankjoke@hotmail.com>
  *      MIT License
  * 
- *  V 1.2.5+ April 2020
+ *  V 1.2.7 April 2020
  */
 "use strict";
 
@@ -251,9 +251,7 @@ class MyAdapter {
         this.Df('Adapter %s starting.', this.ains);
         this.getObjectList = adapter.getObjectListAsync ?
             adapter.getObjectListAsync.bind(adapter) :
-            this.c2pBind(adapter.objects.getObjectList, adapter.objects);
-        //this.c2pBind(adapter.objects.getObjectList, adapter.objects); 
-        // adapter.objects.getObjectListAsync.bind(adapter);
+            this.c2p(adapter.objects.getObjectList).bind(adapter.objects);
         this.getForeignState = adapter.getForeignStateAsync.bind(adapter);
         this.setForeignState = adapter.setForeignStateAsync.bind(adapter);
         this.getState = adapter.getStateAsync.bind(adapter);
@@ -831,14 +829,6 @@ class MyAdapter {
             const args = Array.prototype.slice.call(arguments);
             return new Promise((res, rej) => (args.push((err, result) => (err && rej(err)) || res(result)), f.apply(this, args)));
         };
-    }
-
-    static c2pBind(f, b) {
-        assert(typeof f === 'function', 'c2p (f) error: f is not a function!');
-        return function () {
-            const args = Array.prototype.slice.call(arguments);
-            return new Promise((res, rej) => (args.push((err, result) => (err && rej(err)) || res(result)), f.apply(this, args)));
-        }.bind(b);
     }
 
     static c1p(f) {
