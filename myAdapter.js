@@ -3,7 +3,7 @@
  *      (c) 2019- <frankjoke@hotmail.com>
  *      MIT License
  * 
- *  V 1.2.7 April 2020
+ *  V 1.2.8 Mai 2020
  */
 "use strict";
 
@@ -1125,9 +1125,9 @@ class MyAdapter {
     }
 
     static isLinuxApp(name) {
-        if (os.platform() !== 'linux')
-            return false;
-        return this.exec('!which ' + name).then(x => x.length >= name.length, () => false);
+        return os.platform() !== 'linux' 
+        ? Promise.resolve(false) 
+        : this.exec('!which ' + name).then(x => x.length >= name.length, () => false);
     }
 }
 
